@@ -523,7 +523,7 @@ def home():
   </a>
 {% endfor %}
 </div>
-{% if not sectors %}<div class="sector-empty">No matching sector found.</div>{% endif}
+{% if not sectors %}<div class="sector-empty">No matching sector found.</div>{% endif %}
 """, sectors=sector_cards,total=total,starred=starred)
     return render_template_string(BASE,content=content)
 
