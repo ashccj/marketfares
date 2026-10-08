@@ -92,6 +92,12 @@ def init_db():
     c.commit(); c.close()
 
 
+# Render/Gunicorn imports this module instead of executing it as __main__.
+# Initialize the database at import time so required tables exist before the
+# first web request. This is safe because init_db() uses CREATE IF NOT EXISTS.
+init_db()
+
+
 def clean_text(s):
     s = (s or "").replace("\u200e", "").replace("\u200f", "")
     return s.replace("\r\n", "\n").replace("\r", "\n").strip()
@@ -466,17 +472,21 @@ def sector_summary(sector, starred_only=False, selected=None):
 BASE=r"""
 <!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>SkyDays Market Fare Intelligence</title>
 <style>
-*{box-sizing:border-box}body{font-family:Arial,sans-serif;background:#f4f7fb;margin:0;color:#172334}header{background:#102d48;color:#fff;padding:16px 24px}.wrap{max-width:1500px;margin:auto;padding:18px}.nav{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.nav a{color:#fff;text-decoration:none;padding:8px 12px;border-radius:7px;background:#214766}.card{background:#fff;border-radius:12px;padding:16px;margin-bottom:14px;box-shadow:0 2px 10px #0001}h2,h3{margin:0 0 10px}.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.kpi{padding:14px;border-radius:10px;background:#edf3ff}.kpi b{font-size:22px}input,select,button,textarea{font:inherit;padding:9px;border:1px solid #cbd5df;border-radius:7px}button{background:#1261a0;color:#fff;border:0;cursor:pointer}button.secondary{background:#64748b}button.star{background:#f4f7fb;color:#172334;border:1px solid #ccd6e0}.flex{display:flex;gap:9px;align-items:center;flex-wrap:wrap}table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;border-bottom:1px solid #e5e9ee;text-align:left;vertical-align:top}th{background:#eef2f6;position:sticky;top:0}.scroll{overflow:auto;max-height:650px}.sector{font-weight:700;font-size:16px}.low{font-weight:800;color:#087443}.muted{color:#687586;font-size:12px}.pill{display:inline-block;padding:4px 7px;border-radius:20px;background:#edf3ff;margin:2px;font-size:12px}.agency-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.agency{padding:10px;border:1px solid #d9e1e8;border-radius:8px;background:#fff}.dropzone{border:2px dashed #9db2c7;border-radius:10px;padding:18px;text-align:center;background:#f9fbfd}
+*{box-sizing:border-box}body{font-family:Arial,sans-serif;background:#f4f7fb;margin:0;color:#172334}header{background:#102d48;color:#fff;padding:16px 24px}.wrap{max-width:1500px;margin:auto;padding:18px}.topbar{display:flex;align-items:center;gap:16px;flex-wrap:wrap}.brand{flex:1;min-width:260px}.brand h2{margin:0}.header-search{display:flex;align-items:center;gap:6px;margin-left:auto}.header-search input{width:260px;background:#fff}.header-search button{background:#1f78b4}.nav{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.nav a{color:#fff;text-decoration:none;padding:8px 12px;border-radius:7px;background:#214766}.card{background:#fff;border-radius:12px;padding:16px;margin-bottom:14px;box-shadow:0 2px 10px #0001}h2,h3{margin:0 0 10px}.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.kpi{padding:14px;border-radius:10px;background:#edf3ff}.kpi b{font-size:22px}input,select,button,textarea{font:inherit;padding:9px;border:1px solid #cbd5df;border-radius:7px}button{background:#1261a0;color:#fff;border:0;cursor:pointer}button.secondary{background:#64748b}button.star{background:#f4f7fb;color:#172334;border:1px solid #ccd6e0}.flex{display:flex;gap:9px;align-items:center;flex-wrap:wrap}table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;border-bottom:1px solid #e5e9ee;text-align:left;vertical-align:top}th{background:#eef2f6;position:sticky;top:0}.scroll{overflow:auto;max-height:650px}.sector{font-weight:700;font-size:16px}.low{font-weight:800;color:#087443}.muted{color:#687586;font-size:12px}.pill{display:inline-block;padding:4px 7px;border-radius:20px;background:#edf3ff;margin:2px;font-size:12px}.agency-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.agency{padding:10px;border:1px solid #d9e1e8;border-radius:8px;background:#fff}.dropzone{border:2px dashed #9db2c7;border-radius:10px;padding:18px;text-align:center;background:#f9fbfd}
 .compare-wrap{overflow:auto;border:1px solid #e2e8f0;border-radius:10px;margin-top:14px}.compare-table{min-width:760px}.compare-table th,.compare-table td{border-right:1px solid #e7ebf0}.compare-table .date-col{position:sticky;left:0;background:#f8fafc;z-index:2;min-width:110px}.agency-head{min-width:150px;text-align:center}.fare-cell{text-align:center;min-width:150px;background:#fff}.fare-cell.best-fare{background:#e9f8ef;box-shadow:inset 0 0 0 2px #0b7a45}.fare-big{font-size:20px;font-weight:800;color:#0d5f38}.fare-special{font-weight:800;color:#7c3aed}.fare-meta{font-size:11px;color:#6b7280;margin-top:3px}.fare-cell.empty{color:#a0a9b4}.agency-select{min-width:190px;max-width:320px;height:38px}.sector-head{padding-bottom:12px}
-.import-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}textarea{width:100%;min-height:180px}.notice{padding:10px;border-radius:8px;background:#edf7ee}.sector-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px}.sector-card{display:flex;min-height:126px;align-items:center;justify-content:center;text-decoration:none;color:#172334;background:linear-gradient(145deg,#fff,#f7fafc);border:1px solid #dbe4ec;border-radius:16px;box-shadow:0 4px 14px #17324a10;transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease}.sector-card:hover{transform:translateY(-2px);box-shadow:0 8px 22px #17324a18;border-color:#a9bfd1}.sector-main{text-align:center;line-height:1}.sector-route{font-size:32px;font-weight:800;letter-spacing:.5px;white-space:nowrap}.sector-arrow{display:inline-block;margin:0 7px;font-weight:500;color:#597087}.sector-airlines{margin-top:13px;color:#718096;font-size:12px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase}.sector-search{width:320px;max-width:100%;background:#fff}.sector-empty{padding:35px;text-align:center;color:#687586;border:1px dashed #cbd5df;border-radius:12px;background:#fafcfe}@media(max-width:1000px){.grid{grid-template-columns:repeat(2,1fr)}.agency-grid,.import-grid{grid-template-columns:1fr 1fr}}@media(max-width:650px){.grid,.agency-grid,.import-grid{grid-template-columns:1fr}.wrap{padding:10px}.sector-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.sector-card{min-height:105px;border-radius:13px}.sector-route{font-size:24px}.sector-arrow{margin:0 4px}.sector-airlines{margin-top:10px;font-size:10px;letter-spacing:1px}}
-</style></head><body><header><div class="wrap" style="padding-top:0;padding-bottom:0"><h2>SkyDays Market Fare Intelligence</h2><div style="color:#c8d7e6">Sector-wise market inventory • fare intelligence</div><div class="nav"><a href="/">Market Inventory</a><a href="/agencies">Agencies</a><a href="/import">Import</a></div></div></header><div class="wrap">{% with messages=get_flashed_messages() %}{% for m in messages %}<div class="card notice">{{m}}</div>{% endfor %}{% endwith %}{{content|safe}}</div></body></html>
+.import-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}textarea{width:100%;min-height:180px}.notice{padding:10px;border-radius:8px;background:#edf7ee}.sector-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px}.sector-card{display:flex;min-height:126px;align-items:center;justify-content:center;text-decoration:none;color:#172334;background:linear-gradient(145deg,#fff,#f7fafc);border:1px solid #dbe4ec;border-radius:16px;box-shadow:0 4px 14px #17324a10;transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease}.sector-card:hover{transform:translateY(-2px);box-shadow:0 8px 22px #17324a18;border-color:#a9bfd1}.sector-main{text-align:center;line-height:1}.sector-route{font-size:32px;font-weight:800;letter-spacing:.5px;white-space:nowrap}.sector-arrow{display:inline-block;margin:0 7px;font-weight:500;color:#597087}.sector-airlines{margin-top:13px;color:#718096;font-size:12px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase}.sector-search{width:320px;max-width:100%;background:#fff}.sector-empty{padding:35px;text-align:center;color:#687586;border:1px dashed #cbd5df;border-radius:12px;background:#fafcfe}@media(max-width:1000px){.header-search{width:100%;margin-left:0}.header-search input{flex:1;width:auto}.grid{grid-template-columns:repeat(2,1fr)}.agency-grid,.import-grid{grid-template-columns:1fr 1fr}}@media(max-width:650px){.grid,.agency-grid,.import-grid{grid-template-columns:1fr}.wrap{padding:10px}.sector-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.sector-card{min-height:105px;border-radius:13px}.sector-route{font-size:24px}.sector-arrow{margin:0 4px}.sector-airlines{margin-top:10px;font-size:10px;letter-spacing:1px}}
+</style></head><body><header><div class="wrap" style="padding-top:0;padding-bottom:0"><div class="topbar"><div class="brand"><h2>SkyDays Market Fare Intelligence</h2><div class="nav"><a href="/">Market Inventory</a><a href="/agencies">Agencies</a><a href="/import">Import</a><a href="/data">Data</a></div></div><form class="header-search" action="/" method="get"><input name="q" value="{{ request.args.get('q','') }}" placeholder="Search sector / destination"><button type="submit">🔍</button></form></div></div></header><div class="wrap">{% with messages=get_flashed_messages() %}{% for m in messages %}<div class="card notice">{{m}}</div>{% endfor %}{% endwith %}{{content|safe}}</div></body></html>
 """
 
 
 @app.route("/")
 def home():
+    q=clean_text(request.args.get("q","")).upper()
+    q_norm=re.sub(r"[^A-Z0-9]","",q)
     c=db()
     sectors=c.execute("SELECT sector, COUNT(*) n FROM fares WHERE sector<>'' GROUP BY sector ORDER BY sector").fetchall()
+    if q_norm:
+        sectors=[s for s in sectors if q_norm in re.sub(r"[^A-Z0-9]","",(s["sector"] or "").upper())]
     starred=c.execute("SELECT name FROM agencies WHERE starred=1 ORDER BY name").fetchall()
     total=c.execute("SELECT COUNT(*) FROM fares").fetchone()[0]
     # Keep airline information lightweight on the landing cards. The detailed
@@ -499,21 +509,7 @@ def home():
         sector_cards.append({"sector":sector,"airlines":airline_codes[:6]})
     c.close()
     content=render_template_string(r"""
-<div class="card">
-  <div class="flex">
-    <div>
-      <h3>Market Sectors</h3>
-      <div class="muted">Choose a sector to check the market against SkyDays.</div>
-    </div>
-    <div style="margin-left:auto"><a href="/import"><button>+ Import Market Data</button></a></div>
-  </div>
-</div>
-<div class="card">
-  <div class="flex">
-    <input id="sectorSearch" class="sector-search" placeholder="Search sector or destination e.g. DXB / CCJDXB" autocomplete="off">
-    <span class="muted">{{sectors|length}} sectors</span>
-  </div>
-</div>
+<div class="flex" style="justify-content:flex-end;margin-bottom:14px"><a href="/import"><button>+ Import Market Data</button></a></div>
 <div id="sectorGrid" class="sector-grid">
 {% for s in sectors %}
   <a class="sector-card" data-sector="{{s['sector']|replace('-','')|upper}}" href="/sector/{{s['sector']}}" aria-label="Open {{s['sector']}} market comparison">
@@ -527,23 +523,7 @@ def home():
   </a>
 {% endfor %}
 </div>
-<div id="sectorEmpty" class="sector-empty" style="display:none">No matching sector found.</div>
-<script>
-const search=document.getElementById('sectorSearch');
-const cards=[...document.querySelectorAll('.sector-card')];
-const empty=document.getElementById('sectorEmpty');
-function filterSectors(){
-  const q=search.value.toUpperCase().replace(/[^A-Z0-9]/g,'');
-  let shown=0;
-  cards.forEach(card=>{
-    const match=!q || card.dataset.sector.includes(q);
-    card.style.display=match?'':'none';
-    if(match) shown++;
-  });
-  empty.style.display=shown?'none':'block';
-}
-search.addEventListener('input',filterSectors);
-</script>
+{% if not sectors %}<div class="sector-empty">No matching sector found.</div>{% endif}
 """, sectors=sector_cards,total=total,starred=starred)
     return render_template_string(BASE,content=content)
 
@@ -782,6 +762,41 @@ def toggle_agency():
     c.execute("UPDATE agencies SET starred=CASE WHEN starred=1 THEN 0 ELSE 1 END WHERE name=?",(name,)); c.commit(); c.close()
     return redirect(request.referrer or url_for("agencies_page"))
 
+@app.route("/data")
+def data_page():
+    from datetime import timedelta
+    selected_date=request.args.get("date","").strip()
+    if not selected_date:
+        selected_date=(datetime.now()-timedelta(days=1)).strftime("%Y-%m-%d")
+    c=db()
+    count=c.execute("SELECT COUNT(*) FROM fares WHERE date(created_at)=?",(selected_date,)).fetchone()[0]
+    latest=c.execute("SELECT MIN(created_at),MAX(created_at) FROM fares WHERE date(created_at)=?",(selected_date,)).fetchone()
+    c.close()
+    content=render_template_string(r"""
+<div class="card"><h3>Daily Market Data</h3><div class="muted">Clear fare records by import date. Agency Master, starred agencies and deductions are not affected.</div></div>
+<div class="card">
+  <form method="get" action="/data" class="flex"><label><b>Data date</b></label><input type="date" name="date" value="{{selected_date}}" onchange="this.form.submit()"></form>
+  <div class="grid" style="margin-top:14px"><div class="kpi">Records on selected date<br><b>{{count}}</b></div><div class="kpi">First import<br><b>{{latest[0] or '—'}}</b></div><div class="kpi">Last import<br><b>{{latest[1] or '—'}}</b></div><div class="kpi">Quick action<br><b>{{'Ready to clear' if count else 'No records'}}</b></div></div>
+</div>
+<div class="card">{% if count %}<form method="post" action="/clear_daily_data" onsubmit="return confirm('Clear {{count}} market-fare records imported on {{selected_date}}? This cannot be undone. Agency Master settings will remain safe.');"><input type="hidden" name="date" value="{{selected_date}}"><button type="submit" style="background:#b42318">Clear {{selected_date}} data ({{count}} records)</button></form>{% else %}<div class="notice">No market-fare records were imported on {{selected_date}}.</div>{% endif %}</div>
+<div class="card flex"><a href="/data?date={{yesterday}}"><button type="button" class="secondary">Check Yesterday</button></a><a href="/data?date={{today}}"><button type="button">Check Today</button></a></div>
+""",selected_date=selected_date,count=count,latest=latest,yesterday=(datetime.now()-timedelta(days=1)).strftime("%Y-%m-%d"),today=datetime.now().strftime("%Y-%m-%d"))
+    return render_template_string(BASE,content=content)
+
+
+@app.post("/clear_daily_data")
+def clear_daily_data():
+    selected_date=request.form.get("date","").strip()
+    if not re.fullmatch(r"\d{4}-\d{2}-\d{2}",selected_date):
+        flash("Please select a valid data date.")
+        return redirect(url_for("data_page"))
+    c=db()
+    deleted=c.execute("DELETE FROM fares WHERE date(created_at)=?",(selected_date,)).rowcount
+    c.commit(); c.close()
+    flash(f"Cleared {deleted} market-fare records imported on {selected_date}. Agency Master was not changed.")
+    return redirect(url_for("data_page",date=selected_date))
+
+
 @app.route("/import")
 def import_page():
     c=db(); agencies=c.execute("SELECT name,starred,deduction FROM agencies ORDER BY starred DESC,name").fetchall(); c.close()
@@ -808,7 +823,7 @@ def import_page():
     </form>
   </div>
 </div>
-<div class="card"><a href="/agencies">Open Agency Master → Add agencies, edit deductions or star agencies</a></div>
+<div class="card"><div class="flex"><a href="/agencies">Open Agency Master → Add agencies, edit deductions or star agencies</a><a href="/data"><button type="button" class="secondary">Clear Daily Data</button></a></div></div>
 <script>const dz=document.getElementById('dropzone'),fi=document.getElementById('fileInput');['dragenter','dragover'].forEach(e=>dz.addEventListener(e,x=>{x.preventDefault();dz.classList.add('drag')}));['dragleave','drop'].forEach(e=>dz.addEventListener(e,x=>{x.preventDefault();dz.classList.remove('drag')}));dz.addEventListener('drop',e=>{if(e.dataTransfer.files.length)fi.files=e.dataTransfer.files});</script>
 """,agencies=agencies)
     return render_template_string(BASE,content=content)
