@@ -1,0 +1,6 @@
+# Local database and imported WhatsApp files
+market_fares.db
+uploads/
+__pycache__/
+*.pyc
+.env
